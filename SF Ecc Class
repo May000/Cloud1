@@ -13,16 +13,13 @@ History
 Version  Author  Date        Detail
 1.0    MP      2013-08-28  Initial Development 
 ************************************************************************/
-public with sharing class EcommerceTriggerHandler 
-{
-  static Map<Id,String> AccRecType = new map<Id,String>();
-  static {
-    for (RecordType rt:[Select Id, Name from RecordType where SObjectType='Account' AND name='Cloudreach'])
-    { // get record type for Cloudreach on account
-//     System.debug('rec typeId - '+rt.name );
-        AccRecType.put(rt.Id, rt.name); 
-    }
-  }
+public with sharing class EcommerceTriggerHandler {
+// maps and lists to prevent limits problems
+  static List<Id> accIds = new List<Id>();
+  static List<Id> VoucherIds = new List<Id>();
+  static List<Orders__c> OrdList = new List<Orders__c>();
+  static List<Opportunity> OptyList = new List<Opportunity>();
+  static List<Voucher__c> VoucherList = new List<Voucher__c>();
   
   boolean m_isExecuting = false;
   integer BatchSize = 0;
@@ -61,12 +58,62 @@ public with sharing class EcommerceTriggerHandler
   }
   
   private static void preInsertEcc(List<Ecommerce_System__c> newEccSys) {
+      processOrder(newEccSys);
   }
   
-  private static void UpdateEcc(List<Ecommerce_System__c> OldEccSys, List<Ecommerce_System__c> newEcc) {
+  private static void UpdateEcc(List<Ecommerce_System__c> OldEccSys, List<Ecommerce_System__c> newEccSys) {
+      processOrder(newEccSys);
+  }
   
+  private static void processOrder(List<Ecommerce_System__c> newEccSys){
+     for (Ecommerce_System__c ecc:newEccSys) {
+     // add account ids and voucher ids to lists for redemption process later
+          accIds.add(ecc.account__c);
+          VoucherIds.add(ecc.Voucher_Code__c);
+         
+         // create new order and opportunity  
+          if (ecc.Order_Complete__c==TRUE && ecc.SF_Updated__c==FALSE) {
+              Orders__c ord = new Orders__c (
+              Account__c = ecc.Account__c,
+              Order_Complete__c = ecc.Order_Complete__c,
+              Product1__c = ecc.Product1__c,
+              Product2__c = ecc.Product2__c,
+              Quantity1__c = ecc.Quantity1__c,
+              Quantity2__c = ecc.Quantity2__c,
+              Amount__c = ecc.Amount__c,
+              Original_Amount__c = ecc.Amount__c,
+              Voucher_Code__c = ecc.Voucher_Code__c,
+              Order_Date__c = ecc.Completed_Date__c);
+              OrdList.add(ord);
+              
+              Opportunity opty = new Opportunity (
+              Name = ecc.name,
+              AccountId = ecc.Account__c,
+              OrderNumber__c = ecc.Name,
+              StageName = 'Closed/Won',
+              Amount = ecc.Amount__c,
+              CloseDate = ecc.Completed_Date__c);
+              OptyList.add(opty);
+             
+         }
+     } 
+     // process discounts from the voucher
+     if (VoucherIds.size()>0){
+        Account[] acc=[Select Id, Last_Order_Date__c from Account where Id IN:AccIds]; 
+     }
+     // commit order and opportunity in database
+     Try{
+        if(OrdList.size()>0) {
+           insert OrdList;
+        }
+        if(OptyList.size()>0) {
+           insert OptyList;
+        }
+     }catch(exception e){} 
   }
   
   static testMethod void myTest() {
+  
   }
 }
+
