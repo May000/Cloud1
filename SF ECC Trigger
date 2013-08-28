@@ -1,0 +1,52 @@
+/************************************************************************
+Ecommerce Trigger Handler
+======================================================
+======================================================
+Purpose:
+-------
+Single Ecommerce trigger.  Business logic is passed on to
+handler class
+
+======================================================
+======================================================
+History
+------- 
+Version  Author  Date        Detail
+1.0    MP      2013-08-28  Initial Development 
+************************************************************************/
+trigger EcommerceTrigger on Ecommerce_System__c ( //after delete, 
+                      after insert, 
+                      //after undelete, 
+                      //after update,
+                      //before delete, 
+                      before insert, 
+                      before update) {
+  /*
+   * Get instance of the trigger handler for Account and pass on the call to the relevant method
+   */                              
+  EcommerceTriggerHandler handler = new EcommerceTriggerHandler(Trigger.isExecuting, Trigger.size);
+  
+  if(Trigger.isInsert && Trigger.isBefore){
+    handler.EccBeforeInsert(Trigger.new);
+  }
+  else if(Trigger.isInsert && Trigger.isAfter){
+    handler.EccAfterInsert(Trigger.new);
+  }
+  
+  else if(Trigger.isUpdate && Trigger.isBefore){
+    handler.EccBeforeUpdate(Trigger.old, Trigger.new, Trigger.newMap);
+  }
+  /*else if(Trigger.isUpdate && Trigger.isAfter){
+
+  }
+  
+  else if(Trigger.isDelete && Trigger.isBefore){
+
+  }
+  else if(Trigger.isDelete && Trigger.isAfter){
+
+  }
+  else if(Trigger.isUnDelete){
+  
+  }*/
+} // end trigger
