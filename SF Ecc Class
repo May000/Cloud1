@@ -1,0 +1,72 @@
+/************************************************************************
+Ecommerce Trigger Handler Class
+======================================================
+======================================================
+Purpose:
+-------
+Single Ecommerce Class.  
+
+======================================================
+======================================================
+History
+------- 
+Version  Author  Date        Detail
+1.0    MP      2013-08-28  Initial Development 
+************************************************************************/
+public with sharing class EcommerceTriggerHandler 
+{
+  static Map<Id,String> AccRecType = new map<Id,String>();
+  static {
+    for (RecordType rt:[Select Id, Name from RecordType where SObjectType='Account' AND name='Cloudreach'])
+    { // get record type for Cloudreach on account
+//     System.debug('rec typeId - '+rt.name );
+        AccRecType.put(rt.Id, rt.name); 
+    }
+  }
+  
+  boolean m_isExecuting = false;
+  integer BatchSize = 0;
+  
+  public EcommerceTriggerHandler(boolean isExecuting, integer size){
+    m_isExecuting = isExecuting;
+    BatchSize = size;
+  }
+    
+  public void EccBeforeInsert(List<Ecommerce_System__c> newEccSys){
+    preInsertEcc(newEccSys);
+  }
+  
+  public void EccAfterInsert(List<Ecommerce_System__c> newEccSys){
+    
+  }
+  
+  public void EccBeforeUpdate(List<Ecommerce_System__c> oldEccSys, List<Ecommerce_System__c> updatedEccSys, Map<ID, Ecommerce_System__c> EccSysMap){
+    updateEcc(OldEccSys, updatedEccSys);
+  }
+  
+  public void EccAfterUpdate(List<Ecommerce_System__c> OldEccSys, List<Ecommerce_System__c> updatedEccSys, Map<ID, Ecommerce_System__c> EccSysMap){
+
+  }
+  
+  public void EccBeforeDelete(List<Ecommerce_System__c> deletedEccSys, Map<ID, Ecommerce_System__c> EccSysMap){
+
+  }
+  
+  public void EccAfterDelete(List<Ecommerce_System__c> deletedEccSys, Map<ID, Ecommerce_System__c> EccSysMap){
+
+  }
+  
+  public void EccUndelete(List<Ecommerce_System__c> restoredEccSys){
+
+  }
+  
+  private static void preInsertEcc(List<Ecommerce_System__c> newEccSys) {
+  }
+  
+  private static void UpdateEcc(List<Ecommerce_System__c> OldEccSys, List<Ecommerce_System__c> newEcc) {
+  
+  }
+  
+  static testMethod void myTest() {
+  }
+}
