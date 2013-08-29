@@ -150,8 +150,28 @@ public with sharing class EcommerceTriggerHandler {
              }
              try {
                // create JSON string and update Ecommerce record so it not processed again.
-               string OrderJSON ='{"Order": { "CustomerName": "'+ ecc.Contact_Name__c +',"CustomerPhone": "' + ecc.Contact_Phone__c + ',"CustomerAddress": "'+ ecc.Contact_Address__c + ', "Products": [ { "Name": "' + ecc.Product1__c + ', "Quantity:": '+ ecc.Quantity1__c + '} {, "Name": "' + ecc.Product2__c + ', "Quantity:": '+ ecc.Quantity2__c + '} ] } }';
-               // blob OrderDoc = EncodingUtil.base64Decode(OrderJSON);
+               JSONGenerator gen = JSON.createGenerator(true);
+               gen.writeStartObject();
+               gen.writeFieldName('Order');
+               gen.writeStartObject();
+               gen.writeStringField('CustomerName', ecc.Contact_Name__c);
+               gen.writeStringField('CustomerPhone', ecc.Contact_Phone__c);
+               gen.writeStringField('CustomerAddress', ecc.Contact_Address__c);
+               gen.writeFieldName('Products');
+               gen.writeStartArray();
+               gen.writeStartObject();
+               gen.writeStringField('Name', ecc.Product1__c);  
+               gen.writeNumberField('Quantity', ecc.Quantity1__c);
+               gen.writeEndObject();
+               gen.writeStartObject();
+               gen.writeStringField('Name', ecc.Product2__c);  
+               gen.writeNumberField('Quantity', ecc.Quantity2__c);
+               gen.writeEndObject();      
+               gen.writeEndArray();
+               gen.writeEndObject();
+               gen.writeEndObject();
+               String OrderJSON = gen.getAsString();
+               // string OrderJSON ='{"Order": { "CustomerName": "'+ ecc.Contact_Name__c +',"CustomerPhone": "' + ecc.Contact_Phone__c + ',"CustomerAddress": "'+ ecc.Contact_Address__c + ', "Products": [ { "Name": "' + ecc.Product1__c + ', "Quantity:": '+ ecc.Quantity1__c + '} {, "Name": "' + ecc.Product2__c + ', "Quantity:": '+ ecc.Quantity2__c + '} ] } }';
                Blob OrderDoc = Crypto.generateDigest('SHA1',Blob.valueOf(OrderJSON));
                Document Doc = new Document(
                AuthorId = UserInfo.getUserId(),
