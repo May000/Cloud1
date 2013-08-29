@@ -1,0 +1,17 @@
+Assumptions
+
+E-commerce object in SF will mimic Finsbury Food’s e-commerce system and send data to SF as I do not have a real data feed
+
+Orders object will create a voucher record if criteria are met.
+
+If a 5% voucher exists for a client then an upgraded 10% voucher will not be issued within the 30 day limit as this is not specified.
+
+To keep things simple, I’ve typed in products for the Ecommerce System instead of using SF Products object as this is just a POC.
+
+No orders will be deleted or amended so if the value falls below the voucher criteria there will not be any corrective code cancelling the voucher.  This is to keep the system simple for the POC.
+
+Voucher code is added to Opportunity although it would be possible to add a lookup field and lin to the voucher record.  This is done to keep the configuration simple.
+
+Contact name, phone and address have been added to order to simplify but this data can be taken from the contacts object if required.  This information is required for the JSON string.
+
+FolderId for documents is hard coded due to time constraints otherwise the code will be looked up using the relevant object.
