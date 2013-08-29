@@ -1,5 +1,5 @@
 
-/************************************************************************
+ /************************************************************************
 Ecommerce Trigger Handler Class
 ======================================================
 ======================================================
@@ -17,12 +17,12 @@ Version  Author  Date        Detail
 public with sharing class EcommerceTriggerHandler {
 // maps and lists to prevent limits problems
   static List<Id> accIds = new List<Id>();
-  static List<Id> VoucherIds = new List<Id>();
+  static List<String> VoucherName = new List<String>();
   static List<Orders__c> OrdList = new List<Orders__c>();
   static List<Opportunity> OptyList = new List<Opportunity>();
   static List<Voucher__c> VoucherList = new List<Voucher__c>();
+  static List<Voucher__c> VoucherUpdtList = new List<Voucher__c>();
   static Map<Id,Date> VouDateMap = new map<Id,Date>();
-//  static Map<Id,Date> VouRedeemed = new map<Id,Date>();
   
   boolean m_isExecuting = false;
   integer BatchSize = 0;
@@ -72,16 +72,39 @@ public with sharing class EcommerceTriggerHandler {
      for (Ecommerce_System__c ecc:newEccSys) {
      // add account ids and voucher ids to lists for redemption process later
           accIds.add(ecc.account__c);
-          VoucherIds.add(ecc.Voucher_Code__c);
+          VoucherName.add(ecc.Voucher_Code__c);
      }
-     
-     for (Ecommerce_System__c ecc:newEccSys) {
+     // get all vouchers available
+     Voucher__c[] vou=[Select Id, Name, Account__c,  Date_of_Expiry__c, Discount__c, Redeemed__c from Voucher__c where Account__c IN:AccIds AND Redeemed__c=FALSE]; 
      // add Account rollup Max voucher expiry date to map - shows that no voucher was issued in the last 30 days
      for (Account acc:[Select Id, Last_Voucher_Date__c from Account where Id IN:AccIds]) {
           vouDateMap.put(acc.Id,acc.Last_Voucher_Date__c);
      }
-         // create new order and opportunity  
-          if (ecc.Order_Complete__c==TRUE && ecc.SF_Updated__c==FALSE) {
+     
+     for (Ecommerce_System__c ecc:newEccSys) {
+       // process discounts from the voucher
+       Decimal DiscAmount = ecc.Amount__c;
+       String VoucherValid = ''; 
+       // check that vouchers are available for redemption
+       if (VoucherName.size()>0 && ecc.Voucher_Code__c!=NULL) {
+         for (Voucher__c v:vou) {
+            if (ecc.Voucher_Code__c==v.Name && ecc.Account__c==v.Account__c && v.Date_of_Expiry__c >= date.today() ) {
+                // assign voucher code and amount (check for 0 errors).
+                VoucherValid = ecc.Voucher_Code__c;
+                if (ecc.Amount__c > 0){
+                   DiscAmount = ecc.Amount__c - ((v.Discount__c / 100) * ecc.Amount__c);
+                }
+                else if (ecc.Amount__c <= 0){
+                    DiscAmount = 0;
+                }
+                // update voucher to indicate it has been redeemed
+                v.Redeemed__c = TRUE;
+                VoucherUpdtList.add(v);
+            }
+         }        
+       }  
+       // create new order and opportunity  
+       if (ecc.Order_Complete__c==TRUE && ecc.SF_Updated__c==FALSE) {
               Orders__c ord = new Orders__c (
               Account__c = ecc.Account__c,
               Order_Complete__c = ecc.Order_Complete__c,
@@ -89,10 +112,10 @@ public with sharing class EcommerceTriggerHandler {
               Product2__c = ecc.Product2__c,
               Quantity1__c = ecc.Quantity1__c,
               Quantity2__c = ecc.Quantity2__c,
-              Amount__c = ecc.Amount__c,
               Original_Amount__c = ecc.Amount__c,
-              Voucher_Code__c = ecc.Voucher_Code__c,
-              Order_Date__c = ecc.Completed_Date__c);
+              Voucher_Code__c = VoucherValid,
+              Order_Date__c = ecc.Completed_Date__c,
+              Amount__c = DiscAmount);
               OrdList.add(ord);
               
               Opportunity opty = new Opportunity (
@@ -101,6 +124,7 @@ public with sharing class EcommerceTriggerHandler {
               OrderNumber__c = ecc.Name,
               StageName = 'Closed/Won',
               Amount = ecc.Amount__c,
+              Voucher_Code__c = VoucherValid,
               CloseDate = ecc.Completed_Date__c);
               OptyList.add(opty);
               
@@ -120,18 +144,12 @@ public with sharing class EcommerceTriggerHandler {
                  Discount__c = 10,
                  Redeemed__c = FALSE);
                  VoucherList.add(Vou2);
-             }   
-         ecc.SF_Updated__c=TRUE;  
-         }
+             }
+          ecc.SF_Updated__c=TRUE;  
+       }
      } 
      
-      // process discounts from the voucher     
-     if (VoucherIds.size()>0) {
-        Voucher__c[] vou=[Select Id, Name, Account__c, Date_Issued__c, Date_of_Expiry__c, Discount__c, Redeemed__c from Voucher__c where Id IN:AccIds]; 
-
-        }
-
-     // commit order and opportunity in database
+     // commit order, opportunity and vouchers in database
      Try{
         if(OrdList.size()>0) {
            insert OrdList;
@@ -141,6 +159,9 @@ public with sharing class EcommerceTriggerHandler {
         }
         if(VoucherList.size()>0) {
            insert VoucherList;
+        }
+        if(VoucherUpdtList.size()>0) {
+           update VoucherUpdtList;
         }
      }catch(exception e){} 
   }
@@ -155,6 +176,7 @@ public with sharing class EcommerceTriggerHandler {
       insert ec1;
       Ecommerce_System__c ec2 = new Ecommerce_System__c(Account__c=a2.id, Amount__c=35.00,Product1__c='pen',Quantity1__c=5,Product2__c='phone',Quantity2__c=2,completed_date__c=date.today(), order_complete__c=TRUE);
       insert ec2;
-  
+      Ecommerce_System__c ec3 = new Ecommerce_System__c(Account__c=a1.id, Amount__c=25.00,Product1__c='pen',Quantity1__c=1,Product2__c='book',Quantity2__c=1,completed_date__c=date.today(), order_complete__c=TRUE, Voucher_Code__c='12345');
+      insert ec2;
   }
 }
