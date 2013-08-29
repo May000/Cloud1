@@ -6,7 +6,7 @@ Orders object will create a voucher record if criteria are met.
 
 If a 5% voucher exists for a client then an upgraded 10% voucher will not be issued within the 30 day limit as this is not specified.
 
-To keep things simple, I’ve typed in products for the Ecommerce System instead of using SF Products object as this is just a POC.
+Products for the Ecommerce System are fields in the order due to time constraints instead of using SF Products object as this is just a POC.
 
 No orders will be deleted or amended so if the value falls below the voucher criteria there will not be any corrective code cancelling the voucher.  This is to keep the system simple for the POC.
 
@@ -15,3 +15,17 @@ Voucher code is added to Opportunity although it would be possible to add a look
 Contact name, phone and address have been added to order to simplify but this data can be taken from the contacts object if required.  This information is required for the JSON string.
 
 FolderId for documents is hard coded due to time constraints otherwise the code will be looked up using the relevant object.
+
+
+Process
+Create new custom objects for the E-commerce System (for data feed), Voucher and Order.
+Add Voucher Date rollup field on Account to enable a simple way to find the latest voucher that has not been redeeemed.
+Add new fields for Order Id and Voucher on the Opportunity object.  Use existing fields for all other requirements.
+Create a trigger on e-commerce system to create an order (if the order is complete) and create a voucher (if criteria are met) and opportunity with Closed/Won Stage.
+The trigger will also calculate the cost of the order if a valid voucher is redeemed.  If a voucher code is entered on the e-commerce system the Order object will calculate the new price and update the Opportunity with the voucher code.
+A new document will be created with the JSON format provided.
+The ecommerce record will not need to be modified or updated.
+
+
+
+
