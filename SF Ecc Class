@@ -172,7 +172,7 @@ public with sharing class EcommerceTriggerHandler {
                gen.writeEndObject();
                String OrderJSON = gen.getAsString();
                // string OrderJSON ='{"Order": { "CustomerName": "'+ ecc.Contact_Name__c +',"CustomerPhone": "' + ecc.Contact_Phone__c + ',"CustomerAddress": "'+ ecc.Contact_Address__c + ', "Products": [ { "Name": "' + ecc.Product1__c + ', "Quantity:": '+ ecc.Quantity1__c + '} {, "Name": "' + ecc.Product2__c + ', "Quantity:": '+ ecc.Quantity2__c + '} ] } }';
-               Blob OrderDoc = Crypto.generateDigest('SHA1',Blob.valueOf(OrderJSON));
+               Blob OrderDoc = Blob.valueOf(OrderJSON);
                Document Doc = new Document(
                AuthorId = UserInfo.getUserId(),
                FolderId = '00lG0000000eOqL',
