@@ -1,5 +1,4 @@
-
- /************************************************************************
+/************************************************************************
 Ecommerce Trigger Handler Class
 ======================================================
 ======================================================
@@ -22,6 +21,7 @@ public with sharing class EcommerceTriggerHandler {
   static List<Opportunity> OptyList = new List<Opportunity>();
   static List<Voucher__c> VoucherList = new List<Voucher__c>();
   static List<Voucher__c> VoucherUpdtList = new List<Voucher__c>();
+   static List<Document> OrderDocList = new List<Document>();
   static Map<Id,Date> VouDateMap = new map<Id,Date>();
   
   boolean m_isExecuting = false;
@@ -115,7 +115,10 @@ public with sharing class EcommerceTriggerHandler {
               Original_Amount__c = ecc.Amount__c,
               Voucher_Code__c = VoucherValid,
               Order_Date__c = ecc.Completed_Date__c,
-              Amount__c = DiscAmount);
+              Amount__c = DiscAmount,
+              Contact_Name__c = ecc.Contact_Name__c,
+              Contact_Phone__c = ecc.Contact_Phone__c,
+              Contact_Address__c = ecc.Contact_Address__c);
               OrdList.add(ord);
               
               Opportunity opty = new Opportunity (
@@ -129,7 +132,7 @@ public with sharing class EcommerceTriggerHandler {
               OptyList.add(opty);
               
              // if amount > £20.00 and Account expiry date < today then assign voucher      
-              If (ecc.Amount__c >= 20.00 && ecc.Amount__c <= 30.00 && (vouDateMap.get(ecc.Account__c) < date.today() || vouDateMap.get(ecc.Account__c)==NULL)) {
+              If (ecc.Amount__c >= 20.00 && ecc.Amount__c < 30.00 && (vouDateMap.get(ecc.Account__c) < date.today() || vouDateMap.get(ecc.Account__c)==NULL)) {
                  Voucher__c Vou1 = new Voucher__c (
                  Account__c = ecc.Account__c,
                  Date_Issued__c = ecc.Completed_Date__c,
@@ -137,7 +140,7 @@ public with sharing class EcommerceTriggerHandler {
                  Redeemed__c = FALSE);
                  VoucherList.add(Vou1);
               }
-              else  If (ecc.Amount__c > 30.00 && vouDateMap.get(ecc.Account__c) < date.today()) {
+              else  If (ecc.Amount__c >= 30.00 && (vouDateMap.get(ecc.Account__c) < date.today() || vouDateMap.get(ecc.Account__c)==NULL)) {
                  Voucher__c Vou2 = new Voucher__c (
                  Account__c = ecc.Account__c,
                  Date_Issued__c = ecc.Completed_Date__c,
@@ -145,7 +148,20 @@ public with sharing class EcommerceTriggerHandler {
                  Redeemed__c = FALSE);
                  VoucherList.add(Vou2);
              }
-          ecc.SF_Updated__c=TRUE;  
+             try {
+               // create JSON string and update Ecommerce record so it not processed again.
+               string OrderJSON ='{"Order": { "CustomerName": "'+ ecc.Contact_Name__c +',"CustomerPhone": "' + ecc.Contact_Phone__c + ',"CustomerAddress": "'+ ecc.Contact_Address__c + ', "Products": [ { "Name": "' + ecc.Product1__c + ', "Quantity:": '+ ecc.Quantity1__c + '} {, "Name": "' + ecc.Product2__c + ', "Quantity:": '+ ecc.Quantity2__c + '} ] } }';
+               // blob OrderDoc = EncodingUtil.base64Decode(OrderJSON);
+               Blob OrderDoc = Crypto.generateDigest('SHA1',Blob.valueOf(OrderJSON));
+               Document Doc = new Document(
+               AuthorId = UserInfo.getUserId(),
+               FolderId = '00lG0000000eOqL',
+               Name = ecc.Name,
+               Type = 'doc',
+               body = OrderDoc);
+               OrderDocList.add(Doc);
+             }catch(exception e){} 
+             ecc.SF_Updated__c=TRUE;  
        }
      } 
      
@@ -163,7 +179,10 @@ public with sharing class EcommerceTriggerHandler {
         if(VoucherUpdtList.size()>0) {
            update VoucherUpdtList;
         }
-     }catch(exception e){} 
+        if(OrderDocList.size()>0) {
+           insert OrderDocList;
+        }
+     }catch(exception e2){} 
   }
   
   static testMethod void myTest() {
