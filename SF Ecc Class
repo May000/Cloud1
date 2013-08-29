@@ -1,3 +1,4 @@
+
 /************************************************************************
 Ecommerce Trigger Handler Class
 ======================================================
@@ -20,6 +21,8 @@ public with sharing class EcommerceTriggerHandler {
   static List<Orders__c> OrdList = new List<Orders__c>();
   static List<Opportunity> OptyList = new List<Opportunity>();
   static List<Voucher__c> VoucherList = new List<Voucher__c>();
+  static Map<Id,Date> VouDateMap = new map<Id,Date>();
+//  static Map<Id,Date> VouRedeemed = new map<Id,Date>();
   
   boolean m_isExecuting = false;
   integer BatchSize = 0;
@@ -70,7 +73,13 @@ public with sharing class EcommerceTriggerHandler {
      // add account ids and voucher ids to lists for redemption process later
           accIds.add(ecc.account__c);
           VoucherIds.add(ecc.Voucher_Code__c);
-         
+     }
+     
+     for (Ecommerce_System__c ecc:newEccSys) {
+     // add Account rollup Max voucher expiry date to map - shows that no voucher was issued in the last 30 days
+     for (Account acc:[Select Id, Last_Voucher_Date__c from Account where Id IN:AccIds]) {
+          vouDateMap.put(acc.Id,acc.Last_Voucher_Date__c);
+     }
          // create new order and opportunity  
           if (ecc.Order_Complete__c==TRUE && ecc.SF_Updated__c==FALSE) {
               Orders__c ord = new Orders__c (
@@ -94,13 +103,34 @@ public with sharing class EcommerceTriggerHandler {
               Amount = ecc.Amount__c,
               CloseDate = ecc.Completed_Date__c);
               OptyList.add(opty);
-             
+              
+             // if amount > £20.00 and Account expiry date < today then assign voucher      
+              If (ecc.Amount__c >= 20.00 && ecc.Amount__c <= 30.00 && (vouDateMap.get(ecc.Account__c) < date.today() || vouDateMap.get(ecc.Account__c)==NULL)) {
+                 Voucher__c Vou1 = new Voucher__c (
+                 Account__c = ecc.Account__c,
+                 Date_Issued__c = ecc.Completed_Date__c,
+                 Discount__c = 5,
+                 Redeemed__c = FALSE);
+                 VoucherList.add(Vou1);
+              }
+              else  If (ecc.Amount__c > 30.00 && vouDateMap.get(ecc.Account__c) < date.today()) {
+                 Voucher__c Vou2 = new Voucher__c (
+                 Account__c = ecc.Account__c,
+                 Date_Issued__c = ecc.Completed_Date__c,
+                 Discount__c = 10,
+                 Redeemed__c = FALSE);
+                 VoucherList.add(Vou2);
+             }   
+         ecc.SF_Updated__c=TRUE;  
          }
      } 
-     // process discounts from the voucher
-     if (VoucherIds.size()>0){
-        Account[] acc=[Select Id, Last_Order_Date__c from Account where Id IN:AccIds]; 
-     }
+     
+      // process discounts from the voucher     
+     if (VoucherIds.size()>0) {
+        Voucher__c[] vou=[Select Id, Name, Account__c, Date_Issued__c, Date_of_Expiry__c, Discount__c, Redeemed__c from Voucher__c where Id IN:AccIds]; 
+
+        }
+
      // commit order and opportunity in database
      Try{
         if(OrdList.size()>0) {
@@ -109,11 +139,22 @@ public with sharing class EcommerceTriggerHandler {
         if(OptyList.size()>0) {
            insert OptyList;
         }
+        if(VoucherList.size()>0) {
+           insert VoucherList;
+        }
      }catch(exception e){} 
   }
   
   static testMethod void myTest() {
+  //test for discount vouchers
+      Account a1 = new Account(name='Test1');
+      Account a2 = new Account(name='Test2');
+      insert a1;
+      insert a2;
+      Ecommerce_System__c ec1 = new Ecommerce_System__c(Account__c=a1.id, Amount__c=25.00,Product1__c='book',Quantity1__c=2,Product2__c='phone',Quantity2__c=1,completed_date__c=date.today(), order_complete__c=TRUE);
+      insert ec1;
+      Ecommerce_System__c ec2 = new Ecommerce_System__c(Account__c=a2.id, Amount__c=35.00,Product1__c='pen',Quantity1__c=5,Product2__c='phone',Quantity2__c=2,completed_date__c=date.today(), order_complete__c=TRUE);
+      insert ec2;
   
   }
 }
-
